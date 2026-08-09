@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GPS Hunt</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- ── Screen 1: No Hunt Loaded ─────────────────────────────── -->
+  <section class="screen" id="screen-no-hunt">
+	<h1>Welcome to GPS Hunt!</h1>
+
+	<!-- Active games list — loaded dynamically from Firebase -->
+	<div id="active-games">
+	  <p>Loading active hunts…</p>
+	</div>
+
+	<button class="btn-primary" onclick="showTeamSetup()">🎥 Create a Hunt</button>
+
+	<p>Choose an active hunt or create your own.</p>
+  </section>
+
+  <!-- ── Screen 2: Team Setup ────────────────────────────── -->
+  <section class="screen" id="screen-team-setup">
+	<h1>Team Setup</h1>
+
+	<div style="max-width:420px;margin:0 auto">
+	  <div>
+		<label for="team-name-input">Enter your team name ⚙️</label>
+		<input type="text" id="team-name-input" placeholder="e.g. The Explorers" maxlength="30" />
+	  </div>
+	  <button class="btn-primary" id="start-btn">🚀 Start Hunt!</button>
+	</div>
+
+	<p>GPS permission will be requested when you start.<br>Keep the screen on during the hunt.</p>
+  </section>
+
+  <!-- ── Screen 3: Playing ────────────────────────────── -->
+  <section class="screen" id="screen-play">
+
+	<!-- Header row -->
+	<div style="display:flex;justify-content:space-between;align-items:center;width:100%;max-width:420px">
+	  <span id="gps-status">GPS…</span>
+	  <span style="font-size:.85rem;color:var(--muted)" id="location-counter">1 / ?</span>
+	  <div style="display:flex;gap:.4rem">
+		<button id="waypoints-btn" style="font-size:.78rem;padding:.3rem .75rem;border-radius:.5rem;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer">📍 Waypoints</button>
+		<button id="invite-btn" style="font-size:.78rem;padding:.3rem .75rem;border-radius:.5rem;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer">📨 Invite</button>
+	  </div>
+	</div>
+
+	<!-- Waypoint panel -->
+	<div id="waypoint-panel" style="display:none;width:100%;max-width:420px;background:var(--surface);border:1px solid var(--border);border-radius:.75rem;overflow:hidden">
+	  <div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem .9rem;border-bottom:1px solid var(--border)">
+		<span style="font-weight:700;font-size:.9rem">📍 All Waypoints</span>
+		<button id="waypoint-panel-close" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;line-height:1">&times;</button>
+	  </div>
+	  <div id="waypoint-list" style="display:flex;flex-direction:column;gap:0;padding:.4rem .5rem;max-height:280px;overflow-y:auto"></div>
+	</div>
+
+	<h2 id="location-name">Location</h2>
+
+	<!-- Progress dots -->
+	<div id="progress-dots"></div>
+
+	<!-- Hot / Cold ring -->
+	<div id="temp-ring">
+	  <span id="temp-label">…</span>
+	  <span id="distance-label"></span>
+	</div>
+
+	<!-- Compass arrow -->
+	<div id="compass-wrap">
+	  <span id="compass-arrow">⬆️</span>
+	  <small style="color:var(--muted);font-size:.78rem">Aim toward target</small>
+	</div>
+
+	<!-- Clue -->
+	<div id="clue-box">Loading clue…</div>
+
+	<!-- Winner banner (populated after someone claims) -->
+	<div id="winner-banner"></div>
+
+	<!-- Claim button — visible only when within 15 m -->
+	<button class="btn-success hidden" id="claim-btn">📍 CLAIM THIS LOCATION!</button>
+
+	<!-- ── Live Leaderboard ───────────────────── -->
+	<div id="inline-leaderboard" style="width:100%;max-width:420px;margin-top:1.5rem">
+	  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem">
+		<h3 style="margin:0">🏆 Live Leaderboard</h3>
+		<span style="font-size:.72rem;color:var(--muted)" id="lb-updated"></span>
+	  </div>
+	  <div style="overflow-x:auto;border-radius:.75rem;border:1px solid var(--border)">
+		<table style="width:100%;border-collapse:collapse;font-size:.85rem">
+		  <thead>
+			<tr style="background:var(--surface)">
+			  <th style="padding:.6rem .75rem;text-align:center;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">#</th>
+			  <th style="padding:.6rem .75rem;text-align:left;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">Team</th>
+			  <th style="padding:.6rem .75rem;text-align:left;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">Loc</th>
+			  <th style="padding:.6rem .75rem;text-align:left;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">Distance</th>
+			</tr>
+		  </thead>
+		  <tbody id="leaderboard-body">
+			<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:1rem;font-size:.8rem">Waiting for teams…</td></tr>
+		  </tbody>
+		</table>
+	  </div>
+	</div>
+
+  </section>
+
+  <!-- ── Screen 4: Location claimed ────────────── -->
+  <section class="screen" id="screen-claimed">
+	<div style="font-size:5rem;animation:pulse 1s 3">🏆</div>
+	<h1>CLAIMED!</h1>
+	<div class="card">
+	  <p style="color:var(--text);font-size:1.1rem;margin-bottom:.5rem">
+		Team <strong id="claimed-team"></strong><br>
+		claimed <strong id="claimed-loc"></strong>
+	  </p>
+	  <p style="color:var(--muted);font-size:.85rem" id="claimed-time"></p>
+	  <p style="margin-top:.75rem;font-size:.8rem">📸 Screenshot this screen as proof!</p>
+	</div>
+	<p>Next location loading…</p>
+  </section>
+
+  <!-- ── Screen 5: Hunt complete ───── -->
+  <section class="screen" id="screen-complete">
+	<div style="font-size:4rem">🎉</div>
+	<h1>Hunt Complete!</h1>
+	<h3>Well done, team <span id="final-team"></span>!</h3>
+
+	<div class="card" style="text-align:left">
+	  <h3 style="margin-bottom:.75rem">Results</h3>
+	  <ul id="final-summary" style="list-style:none;display:flex;flex-direction:column;gap:.6rem;font-size:.9rem;color:var(--muted)"></ul>
+	</div>
+
+	<p>📸 Screenshot these results and share with your Hunt Master.</p>
+	<button class="btn-secondary" onclick="location.reload()">🔄 Play Again</button>
+  </section>
+
+  <!-- ── Invite Modal ── -->
+  <div id="invite-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:999;align-items:center;justify-content:center;padding:1rem">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:1rem;padding:1.5rem;width:100%;max-width:420px;display:flex;flex-direction:column;gap:1rem">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h2 style="margin:0;font-size:1.1rem">📨 Invite to this Hunt</h2>
+        <button id="invite-close" style="background:none;border:none;color:var(--muted);font-size:1.4rem;cursor:pointer;line-height:1">&times;</button>
+      </div>
+      <p style="margin:0;font-size:.85rem;color:var(--muted)">Share this link — anyone who opens it will join the same hunt.</p>
+      <input id="invite-url" type="text" readonly onclick="this.select()"
+        style="width:100%;font-size:.75rem;font-family:monospace;padding:.5rem .7rem;border-radius:.5rem;border:1px solid var(--border);background:var(--bg);color:var(--text);box-sizing:border-box" />
+      <div style="display:flex;gap:.6rem">
+        <button id="invite-copy" class="btn-secondary" style="flex:1;max-width:unset">📋 Copy Link</button>
+        <button id="invite-share" class="btn-primary"  style="flex:1;max-width:unset">🔗 Share</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK (compat v9) — loaded conditionally; safe if no config present -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="firebase.js"></script>
+  <script src="leaderboard.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

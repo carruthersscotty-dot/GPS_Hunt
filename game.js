@@ -175,7 +175,7 @@ const Game = (() => {
         <div style="display:flex;align-items:center;gap:.6rem;padding:.45rem .5rem;${rowStyle}">
           <div style="flex:1;min-width:0">
             <div style="font-size:.88rem;${nameStyle}overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-              ${i+1}. ${loc.name || 'Location '+(i+1)}
+              ${loc.name || 'Location '+(i+1)}
             </div>
             <div style="font-size:.75rem;${isCurrent ? 'color:rgba(255,255,255,.8)' : 'color:var(--muted)'}">
               ${distStr}${isClaimed ? ' - claimed by ' + loc.claimedBy : ''}
@@ -204,12 +204,9 @@ const Game = (() => {
 
   /* GPS position handler */
   function onPosition(pos) {
-    lastPos = pos.coords;
+    lastPos = pos;
     const status = el('gps-status');
-    if (status) {
-      status.textContent = `GPS +/-${Math.round(pos.coords.accuracy)}m`;
-      status.className = 'ok';
-    }
+    if (status) { status.textContent = 'GPS OK'; status.className = 'ok'; }
 
     if (currentIdx >= locations.length) return;
     const target = locations[currentIdx];
@@ -257,26 +254,9 @@ const Game = (() => {
 
     if (firebaseReady) FirebaseDB.pushUpdate(currentIdx, locations.length, 0, 'claimed');
 
-    el('claimed-team').textContent = teamName;
-    el('claimed-loc').textContent  = loc.name || `Location ${currentIdx + 1}`;
-    el('claimed-time').textContent = now;
-    showScreen('screen-claimed');
-
     setTimeout(() => {
-      if (locations.every(l => l.claimed)) { endGame(); return; }
-
-      if (lastPos) {
-        let nearestIdx = -1, nearestDist = Infinity;
-        locations.forEach((l, i) => {
-          if (!l.claimed) {
-            const d = haversine(lastPos.latitude, lastPos.longitude, l.lat, l.lng);
-            if (d < nearestDist) { nearestDist = d; nearestIdx = i; }
-          }
-        });
-        if (nearestIdx >= 0) currentIdx = nearestIdx;
-      } else {
-        currentIdx = locations.findIndex(l => !l.claimed);
-      }
+      const unclaimedLocations = locations.filter(loc => !loc.claimed);
+      currentIdx = unclaimedLocations.length > 0 ? locations.indexOf(unclaimedLocations[0]) : locations.length;
 
       updatePlayScreen();
       showScreen('screen-play');
@@ -289,10 +269,10 @@ const Game = (() => {
     if (watchId !== null) navigator.geolocation.clearWatch(watchId);
     if (firebaseReady) FirebaseDB.pushUpdate(locations.length, locations.length, 0, 'finished');
     showScreen('screen-complete');
-    el('final-team').textContent = teamName;
+    el('location-count').textContent = locations.length;
+    el('team-name').textContent = teamName;
 
-    const ul = el('final-summary');
-    ul.innerHTML = locations.map((loc, i) =>
+    el('final-summary').innerHTML = locations.map((loc, i) =>
       `<li>${i+1}. <strong>${loc.name || 'Location '+(i+1)}</strong> - ${
         loc.claimed ? 'Claimed by ' + loc.claimedBy + ' @ ' + loc.claimedAt : 'Not claimed'
       }</li>`
